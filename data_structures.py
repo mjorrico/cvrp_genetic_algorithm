@@ -17,14 +17,19 @@ class Node:
         # return "Node(" + str(self.node_id) + ", " + str(self.demand) + ", " + str(self.x) + ", " + str(self.y) + ")"
 
 class Route:
-    def __init__(self, route_list: List[Node], required_capacity: int, depot_node: Node):
+    def __init__(self, route_list: List[Node], depot_node: Node):
         self.route = route_list
         self.depot_node = depot_node
-        self.route_distance = 0
-        self.storage_used = 0
+        self.route_distance = -1
+        self.storage_used = -1
+        self.length = -1
+        self.calculate_all()
+    
+    def calculate_all(self):
         self.calculate_distance()
         self.calculate_storage()
-    
+        self.calculate_length()
+
     def calculate_distance(self):
         route = [self.depot_node] + self.route + [self.depot_node]
         route_distance = 0
@@ -35,10 +40,15 @@ class Route:
         self.route_distance = route_distance
     
     def calculate_storage(self):
-        storage_usage = 0
-        for n in self.route:
-            storage_usage += n.demand
-        self.storage_used = storage_usage
+        self.storage_used = sum([n.demand for n in self.route])
+
+    def calculate_length(self):
+        self.length = len(self.route)
+
+    def remove_node(self, node: Node):
+        if node in self.route:
+            self.route.remove(node)
+            self.calculate_all()
 
     def __repr__(self):
         return str(self.route)
