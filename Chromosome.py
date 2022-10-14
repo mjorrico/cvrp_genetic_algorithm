@@ -124,9 +124,9 @@ class Chromosome:
         # print(x_route_idx, x_node_idx)
         # print(y_route_idx, y_node_idx, "\n")
 
-        x_route = self.path[x_route_idx]
+        x_route = self.path[x_route_idx] # Route object
         y_route = self.path[y_route_idx]
-        x_node = x_route.route[x_node_idx]
+        x_node = x_route.route[x_node_idx] # Node object
         y_node = y_route.route[y_node_idx]
 
         x_spaceleft = CAR_CAPACITY - (x_route.storage_used - x_node.demand)
@@ -137,6 +137,9 @@ class Chromosome:
         # 2. CAPACITY - (y_route.storage_used - y_node.demand) >= x_node.demand
         if x_spaceleft >= y_node.demand and y_spaceleft >= x_node.demand:
             self.path[x_route_idx].route[x_node_idx], self.path[y_route_idx].route[y_node_idx] = y_node, x_node
+            self.path[x_route_idx].calculate_all()
+            self.path[y_route_idx].calculate_all()
+            self.calculate_fitness()
 
 if __name__=="__main__":
 
@@ -151,13 +154,13 @@ if __name__=="__main__":
     # print("c1:", c1.path, c1.fitness, "\n")
     # print("c1:", c2.path, c2.fitness, "\n")
 
-    # # mutation testing
-    # l = customer_list[:7]
-    # print("nodes:", l, "\n")
-    # p = Chromosome(l)
-    # print("p:", p.path, p.fitness, "\n")
-    # p.mutation(0.1)
-    # print("p:", p.path, p.fitness, "\n")
+    # mutation testing
+    l = customer_list[:7]
+    print("nodes:", l, "\n")
+    p = Chromosome(l)
+    print("p:", p.path, p.fitness, "\n")
+    p.mutation(0.1)
+    print("p:", p.path, p.fitness, "\n")
 
     # # measuring initialization speed
     # start_time = time()
