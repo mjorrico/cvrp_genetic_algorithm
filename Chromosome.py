@@ -1,4 +1,4 @@
-from Node import Node
+from data_structures import Node, Route
 from typing import List
 from time import time
 
@@ -19,8 +19,8 @@ for start_node in node_list:
         start_node.distances[goal_node.node_id] = ((x1 - x2)**2 + (y1 - y2)**2)**0.5
 
 class Chromosome:
-    def __init__(self, population: List[Node]) -> None:
-        self.sequence = np.random.permutation(population)
+    def __init__(self, node_list: List[Node]) -> None:
+        self.sequence = np.random.permutation(node_list)
         self.routes = []
         self.fitness = -1
         self.generate_entire_routes() # overrides self.routes
@@ -30,46 +30,54 @@ class Chromosome:
         subroute = []
         capacity_sum = 0
         for n in self.sequence:
-            if capacity_sum + n.demand <= 25:
+            if capacity_sum + n.demand <= 100:
                 subroute.append(n)
                 capacity_sum += n.demand
             else:
-                self.routes.append(subroute)
+                self.routes.append(Route(subroute, capacity_sum, depot_node))
                 capacity_sum = n.demand
                 subroute = [n]
-        self.routes.append(subroute)
+        self.routes.append(Route(subroute, capacity_sum, depot_node))
     
     def calculate_fitness(self):
-        total_distance = np.sum([self._subroute_distance(subroute) for subroute in self.routes])
+        total_distance = sum([route.route_distance for route in self.routes])
         self.fitness = 1/total_distance*1073 # normalize fitness (0, 1]
 
+    def __mul__(self, other): # crossover operation
+        pass
 
-    def _subroute_distance(self, subroute):
-        subroute = [depot_node] + subroute + [depot_node]
-        subroute_distance = 0
-        for i in range(len(subroute) - 1):
-            start_node = subroute[i]
-            goal_node_id = subroute[i+1].node_id
-            subroute_distance += start_node.distances[goal_node_id]
-        return subroute_distance
+    def mutation(self):
+        # after overriding self.routes, self._flatten_routes is called to update self.sequence
+        self._flatten_routes()
 
-
-
-
-
+    def _flatten_routes(self):
+        new_sequence = []
+        for subroute in self.routes:
+            new_sequence += subroute
+        self.sequence = new_sequence
 
 if __name__=="__main__":
     pass
-    # l = customer_list
-    # print(l)
-    # c = Chromosome(l)
-    # print(c.sequence)
-    # print(c.routes)
-    # print(len(c.routes))
+    l = customer_list
+    print(l)
+    print()
+    c = Chromosome(l)
+    print(c.sequence)
+    print()
+    print(c.routes)
+    print()
+    print(len(c.routes))
+    print()
+
+    for route in 
 
     # # measuring initialization speed
     # start_time = time()
+    # max_fitness = 0
+    # min_fitness = 1
     # for i in range(10000):
     #     c = Chromosome(customer_list)
-    #     # print(c.fitness)
+    #     max_fitness = max(max_fitness, c.fitness)
+    #     min_fitness = min(min_fitness, c.fitness)
     # print(time() - start_time)
+    # print(max_fitness, min_fitness)
