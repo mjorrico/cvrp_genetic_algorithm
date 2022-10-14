@@ -19,10 +19,11 @@ class Node:
 class Route:
     def __init__(self, route_list: List[Node], required_capacity: int, depot_node: Node):
         self.route = route_list
-        self.required_capacity = required_capacity
         self.depot_node = depot_node
         self.route_distance = 0
+        self.storage_used = 0
         self.calculate_distance()
+        self.calculate_storage()
     
     def calculate_distance(self):
         route = [self.depot_node] + self.route + [self.depot_node]
@@ -32,6 +33,12 @@ class Route:
             goal_node_id = route[i+1].node_id
             route_distance += start_node.distances[goal_node_id]
         self.route_distance = route_distance
+    
+    def calculate_storage(self):
+        storage_usage = 0
+        for n in self.route:
+            storage_usage += n.demand
+        self.storage_used = storage_usage
 
     def __repr__(self):
         return str(self.route)
