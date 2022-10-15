@@ -51,4 +51,4 @@ class Route:
             self.calculate_all()
 
     def __repr__(self):
-        return str(self.route)
+        return str(self.route) + " " + str(self.route_distance)

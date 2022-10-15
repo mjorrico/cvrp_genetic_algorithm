@@ -1,9 +1,10 @@
 from argparse import ArgumentError
 from data_structures import Node, Route
 from typing import List
-from copy import deepcopy
 from time import time
+from copy import deepcopy
 
+import matplotlib.pyplot as plt
 import numpy as np
 import csv
 
@@ -14,7 +15,7 @@ with open("data.csv", newline='') as r:
 node_list = [Node(node_id, demand, x, y) for node_id, demand, x, y in data]
 depot_node = node_list[0]
 customer_list = node_list[1:]
-CAR_CAPACITY = 30
+CAR_CAPACITY = 100
 
 for start_node in node_list:
     for goal_node in node_list:
@@ -80,31 +81,33 @@ class Chromosome:
                 if n in route.route:
                     route.remove_node(n)
                     break
+
+        new_path_fixed = [r for r in new_path if r.length > 0]
+        new_path = new_path_fixed
         
         # readding nodes in node_list to original_path_list
         for n in np.random.permutation(node_list):
-            best_route_distance = float("inf")
+            best_route_distance_improvement = float("inf")
             best_route_idx = None # int
             best_route = None # Route object
             for route_idx, route in enumerate(new_path):
                 if route.storage_used + n.demand <= CAR_CAPACITY:
                     for i in range(route.length + 1):
                         new_route_list = route.route[0:i] + [n] + route.route[i:]
-                        new_subroute = Route(new_route_list, depot_node)
-                        if new_subroute.route_distance < best_route_distance:
-                            best_route_distance = new_subroute.route_distance
+                        new_route = Route(new_route_list, depot_node)
+                        if new_route.route_distance - route.route_distance < best_route_distance_improvement: # SOMETHING IS WRONG IN HERE
+                            best_route_distance_improvement = new_route.route_distance - route.route_distance
                             best_route_idx = route_idx
-                            best_route = new_subroute
+                            best_route = new_route
             if best_route is None:
-                new_path = new_path + Route([n], depot_node)
+                new_path = new_path + [Route([n], depot_node)]
             else:
                 new_path[best_route_idx] = best_route
 
         return new_path
 
     def mutation(self, beta: float):
-        # for i in range(len(customer_list)):
-        for i in range(7):
+        for i in range(len(customer_list)):
             if np.random.random() < beta:
                 mutation_type = np.random.choice(["swap", 'shift', "invert"], p=[1, 0, 0])
                 if mutation_type == "swap":
@@ -149,7 +152,7 @@ class Chromosome:
             raise TypeError
 
 def generate_population(n_population: int = 10):
-    return [Chromosome(customer_list) for i in range(n_population)]
+    return sorted([Chromosome(customer_list) for i in range(n_population)])
 
 def select_parents(chr_list: List[Chromosome]):
     fitness_list = [c.fitness for c in chr_list]
@@ -157,7 +160,21 @@ def select_parents(chr_list: List[Chromosome]):
     roulette_rank = [f/sum_fitness for f in fitness_list]
     return np.random.choice(chr_list, 2, False, roulette_rank)
 
-
+def draw_chromosome(chr: Chromosome, filename = "chromosome.jpg"):
+    legend = ["Car " + str(i+1) for i in range(len(chr.path))]
+    x_depot = depot_node.x
+    y_depot = depot_node.y
+    for route in chr.path:
+        x = [x_depot] + [node.x for node in route.route] + [x_depot]
+        y = [y_depot] + [node.y for node in route.route] + [y_depot]
+        plt.plot(x, y, marker = "o")
+        plt.legend(legend)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Paths Taken By Each Delivery Cars")
+    plt.xlim([-2.5, 130])
+    plt.savefig(filename, dpi=600, transparent=False, figsize=[20, 20])
+    # plt.show()
 
 
 if __name__=="__main__":

@@ -1,2 +1,5 @@
-sandbox*
+sandbox.py
 __*
+*.ipynb
+*.jpg
+*.png
