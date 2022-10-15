@@ -1,3 +1,4 @@
+from argparse import ArgumentError
 from data_structures import Node, Route
 from typing import List
 from copy import deepcopy
@@ -23,9 +24,9 @@ for start_node in node_list:
 class Chromosome:
     def __init__(self, node_list: List[Node] = None, path_list: List[List[Node]] = None) -> None:
         if node_list is None and path_list is None:
-            raise ArgumentTypeError("Please specify either node_list or path_list.")
+            raise ArgumentError("Please specify either node_list or path_list.")
         elif node_list is not None and path_list is not None:
-            raise ArgumentTypeError("Please specify only one among node_list and path_list.")
+            raise ArgumentError("Please specify only one among node_list and path_list.")
         
         if node_list is not None and path_list is None:
             node_permutation = np.random.permutation(node_list)
@@ -141,6 +142,24 @@ class Chromosome:
             self.path[y_route_idx].calculate_all()
             self.calculate_fitness()
 
+    def __gt__(self, other):
+        if isinstance(self, Chromosome) and isinstance(other, Chromosome):
+            return self.fitness > other.fitness
+        else:
+            raise TypeError
+
+def generate_population(n_population: int = 10):
+    return [Chromosome(customer_list) for i in range(n_population)]
+
+def select_parents(chr_list: List[Chromosome]):
+    fitness_list = [c.fitness for c in chr_list]
+    sum_fitness = sum(fitness_list)
+    roulette_rank = [f/sum_fitness for f in fitness_list]
+    return np.random.choice(chr_list, 2, False, roulette_rank)
+
+
+
+
 if __name__=="__main__":
 
     # # crossover testing
@@ -154,13 +173,22 @@ if __name__=="__main__":
     # print("c1:", c1.path, c1.fitness, "\n")
     # print("c1:", c2.path, c2.fitness, "\n")
 
-    # mutation testing
-    l = customer_list[:7]
-    print("nodes:", l, "\n")
-    p = Chromosome(l)
-    print("p:", p.path, p.fitness, "\n")
-    p.mutation(0.1)
-    print("p:", p.path, p.fitness, "\n")
+    # # mutation testing
+    # l = customer_list[:7]
+    # print("nodes:", l, "\n")
+    # p = Chromosome(l)
+    # print("p:", p.path, p.fitness, "\n")
+    # p.mutation(0.1)
+    # print("p:", p.path, p.fitness, "\n")
+
+    # # comparison testing
+    # l = customer_list[:7]
+    # p1 = Chromosome(l)
+    # p2 = Chromosome(l)
+    # print(p1.path, p1.fitness, "\n")
+    # print(p2.path, p2.fitness, "\n")
+    # print(p1 > p2)
+    # print(p1 < p2)
 
     # # measuring initialization speed
     # start_time = time()

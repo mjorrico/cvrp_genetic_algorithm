@@ -1,1 +1,2 @@
-from Chromosome import Chromosome
+import chromosome
+
