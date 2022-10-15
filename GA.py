@@ -1,5 +1,6 @@
 import chromosome
 import numpy as np
+from time import time
 from copy import deepcopy
 
 def genetic_algorithm(n_generations, n_population, keep_best, crossover_rate, mutation_rate):
@@ -21,5 +22,7 @@ def genetic_algorithm(n_generations, n_population, keep_best, crossover_rate, mu
         print("best distance:", best_distance)
     return population[-1]
 
-best_chromosome = genetic_algorithm(200,  10, 1, 0.5, 0.02)
+start = time()
+best_chromosome = genetic_algorithm(400,  10, 1, 0.5, 0.02)
 chromosome.draw_chromosome(best_chromosome, "chromosome1.jpg")
+print("Time elapsed: " + str(time() - start))

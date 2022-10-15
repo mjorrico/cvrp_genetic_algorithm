@@ -13,14 +13,15 @@ with open("data.csv", newline='') as r:
     data = np.array(list(reader)[1:], dtype = np.int64)
 
 node_list = [Node(node_id, demand, x, y) for node_id, demand, x, y in data]
-depot_node = node_list[0]
-customer_list = node_list[1:]
 CAR_CAPACITY = 100
 
 for start_node in node_list:
     for goal_node in node_list:
         x1, y1, x2, y2 = [start_node.x, start_node.y, goal_node.x, goal_node.y]
         start_node.distances[goal_node.node_id] = ((x1 - x2)**2 + (y1 - y2)**2)**0.5
+
+depot_node = node_list[0]
+customer_list = node_list[1:]
 
 class Chromosome:
     def __init__(self, node_list: List[Node] = None, path_list: List[List[Node]] = None) -> None:
@@ -173,7 +174,7 @@ def draw_chromosome(chr: Chromosome, filename = "chromosome.jpg"):
     plt.ylabel("y")
     plt.title("Paths Taken By Each Delivery Cars")
     plt.xlim([-2.5, 130])
-    plt.savefig(filename, dpi=600, transparent=False, figsize=[20, 20])
+    plt.savefig(filename, dpi=600, transparent=False)
     # plt.show()
 
 
