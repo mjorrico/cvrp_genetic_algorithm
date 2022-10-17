@@ -1,19 +1,29 @@
-from argparse import ArgumentError
-from data_structures import Node, Route
 from typing import List
-from time import time
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
 
+class Node:
+    def __init__(self, node_id, demand, x, y):
+        self.node_id = node_id
+        self.demand = demand
+        self.x = x
+        self.y = y
+        self.distances = {} # {node_id: distance}
+
+    def __eq__(self, other):
+        return self.node_id == other.node_id
+    
+    def __repr__(self) -> str:
+        return str((self.node_id, self.demand, self.x, self.y))
+
 with open("data.csv", newline='') as r:
     reader = csv.reader(r, delimiter=";")
     data = np.array(list(reader)[1:], dtype = np.int64)
 
 node_list = [Node(node_id, demand, x, y) for node_id, demand, x, y in data]
-CAR_CAPACITY = 100
 
 for start_node in node_list:
     for goal_node in node_list:
@@ -22,23 +32,55 @@ for start_node in node_list:
 
 depot_node = node_list[0]
 customer_list = node_list[1:]
+CAR_CAPACITY = 100
+
+class Route:
+    def __init__(self, route_list: List[Node], depot_node: Node):
+        self.route = route_list
+        self.depot_node = depot_node
+
+    @property
+    def route_distance(self) -> float:
+        real_route = [self.depot_node] + self.route + [self.depot_node]
+        distance = 0
+        for i in range(len(real_route) - 1):
+            start_node = real_route[i]
+            goal_node_id = real_route[i+1].node_id
+            distance += start_node.distances[goal_node_id]
+        return distance
+    
+    @property
+    def storage_used(self):
+        return sum([n.demand for n in self.route])
+
+    @property
+    def length(self):
+        return len(self.route)
+
+    def remove_node(self, node: Node):
+        if node in self.route:
+            self.route.remove(node)
+
+    def __repr__(self):
+        return "Route: " + str(self.route) + "\n" + "Distance: " + str(self.route_distance)
 
 class Chromosome:
-    def __init__(self, node_list: List[Node] = None, path_list: List[List[Node]] = None) -> None:
-        if node_list is None and path_list is None:
-            raise ArgumentError("Please specify either node_list or path_list.")
-        elif node_list is not None and path_list is not None:
-            raise ArgumentError("Please specify only one among node_list and path_list.")
-        
-        if node_list is not None and path_list is None:
-            node_permutation = np.random.permutation(node_list)
+    def __init__(self, input_list) -> None:
+        if not isinstance(input_list, List) or len(input_list) < 1:
+            raise TypeError
+        elif isinstance(input_list[0], Node):
             self.path = []
-            self.generate_entire_path(node_permutation)
-        elif node_list is None and path_list is not None:
-            self.path = path_list
+            self.generate_entire_path(np.random.permutation(input_list))
+        elif isinstance(input_list[0], Route):
+            self.path = input_list
 
-        self.fitness = -1
-        self.calculate_fitness() # overrides self.fitness
+    @property
+    def distance(self):
+        return sum([route.route_distance for route in self.path])
+
+    @property
+    def fitness(self):
+        return 1/self.distance*1073 # normalize fitness (0, 1]
 
     def generate_entire_path(self, node_sequence):
         subpath = []
@@ -52,10 +94,6 @@ class Chromosome:
                 subpath_storage = n.demand
                 subpath = [n]
         self.path.append(Route(subpath, depot_node))
-    
-    def calculate_fitness(self):
-        total_distance = sum([route.route_distance for route in self.path])
-        self.fitness = 1/total_distance*1073 # normalize fitness (0, 1]
 
     def __mul__(self, other): # crossover operation
         path1 = deepcopy(self.path)
@@ -63,14 +101,11 @@ class Chromosome:
         subpath1 = np.random.choice(path1) # subpath is Route object
         subpath2 = np.random.choice(path2)
 
-        # # DEBUGGING
-        # print(subpath1, subpath2, "\n")
-
         child_path1 = self.BCRC_crossover(path1, subpath2.route)
         child_path2 = self.BCRC_crossover(path2, subpath1.route)
 
-        child1 = Chromosome(path_list = child_path1)
-        child2 = Chromosome(path_list = child_path2)
+        child1 = Chromosome(child_path1)
+        child2 = Chromosome(child_path2)
 
         return [child1, child2]
     
@@ -83,10 +118,9 @@ class Chromosome:
                     route.remove_node(n)
                     break
 
-        new_path_fixed = [r for r in new_path if r.length > 0]
-        new_path = new_path_fixed
+        new_path = [r for r in new_path if r.length > 0]
         
-        # readding nodes in node_list to original_path_list
+        # re-adding nodes in node_list to original_path_list
         for n in np.random.permutation(node_list):
             best_route_distance_improvement = float("inf")
             best_route_idx = None # int
@@ -125,10 +159,6 @@ class Chromosome:
         y_route_idx = np.random.randint(len(self.path))
         y_node_idx = np.random.randint(len(self.path[y_route_idx].route))
 
-        # # DEBUGGING
-        # print(x_route_idx, x_node_idx)
-        # print(y_route_idx, y_node_idx, "\n")
-
         x_route = self.path[x_route_idx] # Route object
         y_route = self.path[y_route_idx]
         x_node = x_route.route[x_node_idx] # Node object
@@ -142,15 +172,17 @@ class Chromosome:
         # 2. CAPACITY - (y_route.storage_used - y_node.demand) >= x_node.demand
         if x_spaceleft >= y_node.demand and y_spaceleft >= x_node.demand:
             self.path[x_route_idx].route[x_node_idx], self.path[y_route_idx].route[y_node_idx] = y_node, x_node
-            self.path[x_route_idx].calculate_all()
-            self.path[y_route_idx].calculate_all()
-            self.calculate_fitness()
 
     def __gt__(self, other):
         if isinstance(self, Chromosome) and isinstance(other, Chromosome):
             return self.fitness > other.fitness
         else:
             raise TypeError
+    
+    def __str__(self):
+        general_info = ["Number of routes: {}\nDistance: {}".format(len(self.path), self.distance)]
+        path_info = ["Route {} -> {} (Distance: {})".format(i+1, r.route, r.route_distance) for i, r in enumerate(self.path)]
+        return "\n".join(general_info+path_info)
 
 def generate_population(n_population: int = 10):
     return sorted([Chromosome(customer_list) for i in range(n_population)])
@@ -175,50 +207,4 @@ def draw_chromosome(chr: Chromosome, filename = "chromosome.jpg"):
     plt.title("Paths Taken By Each Delivery Cars")
     plt.xlim([-2.5, 130])
     plt.savefig(filename, dpi=600, transparent=False)
-    # plt.show()
-
-
-if __name__=="__main__":
-
-    # # crossover testing
-    # l = customer_list[:7]
-    # print("nodes:", l, "\n")
-    # p1 = Chromosome(l)
-    # print("p1:", p1.path, p1.fitness, "\n")
-    # p2 = Chromosome(l)
-    # print("p1:", p2.path, p2.fitness, "\n")
-    # c1, c2 = p1*p2
-    # print("c1:", c1.path, c1.fitness, "\n")
-    # print("c1:", c2.path, c2.fitness, "\n")
-
-    # # mutation testing
-    # l = customer_list[:7]
-    # print("nodes:", l, "\n")
-    # p = Chromosome(l)
-    # print("p:", p.path, p.fitness, "\n")
-    # p.mutation(0.1)
-    # print("p:", p.path, p.fitness, "\n")
-
-    # # comparison testing
-    # l = customer_list[:7]
-    # p1 = Chromosome(l)
-    # p2 = Chromosome(l)
-    # print(p1.path, p1.fitness, "\n")
-    # print(p2.path, p2.fitness, "\n")
-    # print(p1 > p2)
-    # print(p1 < p2)
-
-    # # measuring initialization speed
-    # start_time = time()
-    # max_fitness = 0
-    # min_fitness = 1
-    # max_car = 0
-    # for i in range(10000):
-    #     c = Chromosome(customer_list)
-    #     max_fitness = max(max_fitness, c.fitness)
-    #     min_fitness = min(min_fitness, c.fitness)
-    #     max_car = max(max_car, len(c.path))
-    # print(time() - start_time)
-    # print(max_fitness, min_fitness, max_car)
-
-    pass
+    print("Image saved as \"{}\".".format(filename))
