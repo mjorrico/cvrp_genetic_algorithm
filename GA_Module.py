@@ -1,8 +1,10 @@
 from typing import List
+from time import time
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
+import functools
 import csv
 
 class Node:
@@ -65,13 +67,10 @@ class Route:
         return "Route: " + str(self.route) + "\n" + "Distance: " + str(self.route_distance)
 
 class Chromosome:
-    def __init__(self, input_list) -> None:
-        if not isinstance(input_list, List) or len(input_list) < 1:
+    def __init__(self, input_list: List[Route]) -> None:
+        if not isinstance(input_list, List) or len(input_list) < 1 or not isinstance(input_list[0], Route):
             raise TypeError
-        elif isinstance(input_list[0], Node):
-            self.path = []
-            self.generate_entire_path(np.random.permutation(input_list))
-        elif isinstance(input_list[0], Route):
+        else:
             self.path = input_list
 
     @property
@@ -82,7 +81,10 @@ class Chromosome:
     def fitness(self):
         return 1/self.distance*1073 # normalize fitness (0, 1]
 
-    def generate_entire_path(self, node_sequence):
+    @classmethod
+    def from_node_list(cls, node_sequence: List[Node]):
+        node_sequence = np.random.permutation(node_sequence)
+        path = []
         subpath = []
         subpath_storage = 0
         for n in node_sequence:
@@ -90,10 +92,11 @@ class Chromosome:
                 subpath.append(n)
                 subpath_storage += n.demand
             else:
-                self.path.append(Route(subpath, depot_node))
+                path.append(Route(subpath, depot_node))
                 subpath_storage = n.demand
                 subpath = [n]
-        self.path.append(Route(subpath, depot_node))
+        path.append(Route(subpath, depot_node))
+        return cls(path)
 
     def __mul__(self, other): # crossover operation
         path1 = deepcopy(self.path)
@@ -117,7 +120,8 @@ class Chromosome:
                 if n in route.route:
                     route.remove_node(n)
                     break
-
+        
+        # removing empty routes
         new_path = [r for r in new_path if r.length > 0]
         
         # re-adding nodes in node_list to original_path_list
@@ -130,7 +134,7 @@ class Chromosome:
                     for i in range(route.length + 1):
                         new_route_list = route.route[0:i] + [n] + route.route[i:]
                         new_route = Route(new_route_list, depot_node)
-                        if new_route.route_distance - route.route_distance < best_route_distance_improvement: # SOMETHING IS WRONG IN HERE
+                        if new_route.route_distance - route.route_distance < best_route_distance_improvement:
                             best_route_distance_improvement = new_route.route_distance - route.route_distance
                             best_route_idx = route_idx
                             best_route = new_route
@@ -184,8 +188,24 @@ class Chromosome:
         path_info = ["Route {} -> {} (Distance: {})".format(i+1, r.route, r.route_distance) for i, r in enumerate(self.path)]
         return "\n".join(general_info+path_info)
 
+    def save_figure(self, filename = "chromosome.jpg"):
+        legend = ["Car " + str(i+1) for i in range(len(self.path))]
+        x_depot = depot_node.x
+        y_depot = depot_node.y
+        for route in self.path:
+            x = [x_depot] + [node.x for node in route.route] + [x_depot]
+            y = [y_depot] + [node.y for node in route.route] + [y_depot]
+            plt.plot(x, y, marker = "o")
+        plt.legend(legend)
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.title("Paths Taken By Each Delivery Cars")
+        plt.xlim([-2.5, 130])
+        plt.savefig(filename, dpi=600)
+        print("Image saved as \"{}\".".format(filename))
+
 def generate_population(n_population: int = 10):
-    return sorted([Chromosome(customer_list) for i in range(n_population)])
+    return sorted([Chromosome.from_node_list(customer_list) for i in range(n_population)])
 
 def select_parents(chr_list: List[Chromosome]):
     fitness_list = [c.fitness for c in chr_list]
@@ -193,18 +213,13 @@ def select_parents(chr_list: List[Chromosome]):
     roulette_rank = [f/sum_fitness for f in fitness_list]
     return np.random.choice(chr_list, 2, False, roulette_rank)
 
-def draw_chromosome(chr: Chromosome, filename = "chromosome.jpg"):
-    legend = ["Car " + str(i+1) for i in range(len(chr.path))]
-    x_depot = depot_node.x
-    y_depot = depot_node.y
-    for route in chr.path:
-        x = [x_depot] + [node.x for node in route.route] + [x_depot]
-        y = [y_depot] + [node.y for node in route.route] + [y_depot]
-        plt.plot(x, y, marker = "o")
-        plt.legend(legend)
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Paths Taken By Each Delivery Cars")
-    plt.xlim([-2.5, 130])
-    plt.savefig(filename, dpi=600, transparent=False)
-    print("Image saved as \"{}\".".format(filename))
+def withtime(f):
+    @functools.wraps(f)
+    def f_withtime(*args, **kwargs):
+        print("Running!")
+        start_time = time()
+        f_result = f(*args, **kwargs)
+        end_time = time()
+        print("Wall time: {} seconds".format(str(end_time - start_time)))
+        return f_result
+    return f_withtime
