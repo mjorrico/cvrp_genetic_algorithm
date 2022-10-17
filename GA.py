@@ -22,6 +22,6 @@ def genetic_algorithm(n_generations, n_population, keep_best, crossover_rate, mu
             print("best distance:", population[-1].distance)
     return population[-1]
 
-best_chromosome = genetic_algorithm(100,  10, 1, 0.25, 0.05)
+best_chromosome = genetic_algorithm(100,  10, 1, 0.25, 0.05) # EDIT THIS LINE TO CHANGE GA PARAMETERS
 print(best_chromosome)
 best_chromosome.save_figure()
