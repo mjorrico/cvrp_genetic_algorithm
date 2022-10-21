@@ -26,7 +26,7 @@ Install dependencies
 Start genetic algorithm
 
 ```bash
-  $ python3 GA.py
+  $ python3 main.py
 ```
 
-Editing `GA.py` is required to change GA's parameters.
+Editing `main.py` is required to change GA's parameters.
