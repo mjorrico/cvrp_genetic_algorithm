@@ -83,7 +83,7 @@ class Chromosome:
                         new_route = Route(
                             route.route[0:i] + [n] + route.route[i:],
                             self.depot_node,
-                        )
+                        )  # This can be more efficient. Do not create new Route object to calculate new path length
                         distance_gain = (
                             new_route.route_distance - route.route_distance
                         )
